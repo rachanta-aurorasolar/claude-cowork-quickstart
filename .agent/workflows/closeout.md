@@ -19,6 +19,7 @@ Use this workflow to wrap up a development session and maintain a clean project 
 
 2. **Improvement (Kaizen)**
    - Identify and address at least one minor instance of "Muda" (waste) or "Mura" (inconsistency).
+   - If instruction files (e.g., `CLAUDE.md`) are updated and grow too large, use `agent-md-refactor` to reorganize.
    - Use the `kaizen` skill for guidance.
 
 3. **Documentation**
@@ -28,6 +29,7 @@ Use this workflow to wrap up a development session and maintain a clean project 
      - Key decisions and rationale.
      - Lessons learned (for future blog content).
      - Git commit hashes.
+   - **Humanization Pass**: Use the `humanizer` skill to ensure documentation is free of AI-isms and matches our premium voice.
 
 4. **Git Hygiene**
    - Stage any remaining changes.

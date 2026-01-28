@@ -12,6 +12,8 @@ Use this workflow once a design has been approved to create a bite-sized, execut
 - **Bite-sized Granularity**: Each task should take 2-5 minutes to implement.
 - **Zero Ambiguity**: Use exact file paths and specify line ranges when modifying.
 - **Goals & Success Criteria**: Every phase must have measurable outcomes.
+- **Deep Planning**: For high-stakes or complex features, use the `gepetto` skill to perform exhaustive research and specs synthesis before writing the plan.
+- **Visual Clarity**: Use the `c4-architecture` skill to define system boundaries and container relationships for architectural changes.
 
 ## Plan Structure (MUST include these sections)
 
@@ -38,4 +40,4 @@ Use this workflow once a design has been approved to create a bite-sized, execut
 - Save the plan to `docs/plans/YYYY-MM-DD-<feature-name>.md`.
 - Ask the user: "Ready to start implementation? Use `/implement`."
 
-**Internal Note**: Use the `test-driven-development` skill during implementation.
+**Internal Note**: Use the `test-driven-development` skill during implementation. For complex architecture, use `c4-architecture`. For deep research, use `gepetto`.

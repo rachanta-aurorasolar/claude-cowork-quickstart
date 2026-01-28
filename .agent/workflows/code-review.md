@@ -19,6 +19,7 @@ Use this workflow to ensure high-quality, spec-compliant code before merging.
 - [ ] **Traces**: Execution logs clear and logical? No hidden bottlenecks?
 - [ ] **Architecture**: Clean Code? DDD/SOLID used where appropriate?
 - [ ] **Kaizen**: Is the codebase better than we found it?
+- [ ] **Entropy Audit**: Did we delete as much as we added? Use the `reducing-entropy` skill to minimize waste.
 - [ ] **Style**: Matches `CLAUDE.md` and project history.
 
 ## The Process

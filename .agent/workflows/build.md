@@ -11,6 +11,7 @@ Use this workflow to execute a structured implementation plan step-by-step.
 - **Atomic Execution**: Complete one task, verify it, and commit it before moving on.
 - **Systematic Verification**: Never assume it works because it "looks right".
 - **Data First**: Verify data availability/structure before building the UI component that displays it.
+- **P0 Standards**: Adhere to the checklists in **.agent/REFERENCE.md** during implementation.
 
 ## The Process
 
@@ -24,6 +25,7 @@ Use this workflow to execute a structured implementation plan step-by-step.
      - **GREEN**: Write minimal code to make the test pass.
      - **REFACTOR**: Clean up code while keeping tests green.
      - **COMMIT**: Use the exact commit command from the plan.
+   - **JSX Integration Check**: When inserting a new component into an existing page, ALWAYS `view_file` the full page first (not just the insertion point). Verify the JSX tree opens and closes correctly after your edit.
    - **UI Task Detection**:
      - When implementing UI components, auto-load `.interface-design/system.md` if exists
      - Apply craft principles from `ui-development` skill
@@ -40,4 +42,4 @@ Use this workflow to execute a structured implementation plan step-by-step.
    - Check off tasks in the plan file as they are completed.
    - Update `PROJECT_HISTORY.md` at the end of the session.
 
-**Next Step**: Once all tasks are complete, use `/code-review` for the final quality check, then `/fix` to resolve all identified issues.
+**Next Step**: Once all tasks are complete, use **/audit** for the final quality and UX check.

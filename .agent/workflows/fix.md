@@ -4,7 +4,7 @@ description: Resolve ALL bugs and technical debt before phase completion. No exc
 
 # /fix
 
-Use this workflow to eliminate all bugs and debt identified during code-review. Nothing carries forward to the next phase.
+Use this workflow to eliminate all bugs and debt identified during **/audit**. Nothing carries forward to the next phase.
 
 ## Core Principles
 - **Zero Carryover**: Every bug and debt item is resolved before closeout. No deferrals.

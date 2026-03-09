@@ -41,9 +41,16 @@ Use this workflow to wrap up a development session and maintain a clean project 
 - **Commit**: Ensure all changes (including doc updates) are committed.
 - **Push**: Push the current feature/phase branch to valid remote.
 
+### 4.5 CI Smoke Test
+- **Simulate CI locally** before pushing: `npm run lint && npm test && npm run build`
+- **Verify CI config**: Ensure `.github/workflows/ci.yml` references only existing `npm` scripts (run `grep 'npm run' .github/workflows/ci.yml` and cross-check against `package.json`)
+- **Secret Hygiene**: If the phase added new env vars, confirm they exist in GitHub → Settings → Secrets → Actions
+- **Node Version**: Confirm the CI matrix targets only **active LTS** Node versions (check [nodejs.org/releases](https://nodejs.org/en/about/releases))
+- **Integration Tests**: Any test that calls an external service must have a graceful skip guard (`if (!url || !key) return`)
+
 ### 5. Phase Transition (If Applicable)
 - **Check Roadmap**: Did we just complete a Phase?
-- **Branch**: If yes, create the branch for the *next* phase (e.g., `git checkout -b feat/phase-4-visuals`).
+- **Branch**: If yes, ask the user if they want to move to debug mode. If they don't then create the branch for the *next* phase (e.g., `git checkout -b feat/phase-4`).
 - **Notify**: Inform user of the new active branch.
 
 ### 6. Summary

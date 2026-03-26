@@ -1,4 +1,4 @@
-# Sandhya Simhan's Antigravity SDK: Unified Agentic Tooling
+# Claude Cowork: Unified Agentic Tooling
 
 A high-performance library of skills and workflows for agentic coding assistants, optimized for the Antigravity IDE. This repository merges the best of **Claude Code Quickstart** and **Superpowers** into a single, unified framework.
 
@@ -73,7 +73,7 @@ Low-frequency skills for specific use cases. See [skills/specialized/](file:///s
 
 ---
 
-*This SDK is Sandhya Simhan's personal quickstart template, created in partnership with **Women Defining AI**, designed to rapidly bootstrap new projects with elite agentic workflows. It merges and optimizes patterns from the original **Claude Code Quickstart** with **Superpowers** ([obra/superpowers](https://github.com/obra/superpowers)), and incorporates community skills curated from [Awesome Claude Skills](https://github.com/BehiSecc/awesome-claude-skills).*
+*This SDK is a personal quickstart template, created in partnership with **Women Defining AI**, designed to rapidly bootstrap new projects with elite agentic workflows. It merges and optimizes patterns from the original **Claude Code Quickstart** with **Superpowers** ([obra/superpowers](https://github.com/obra/superpowers)), and incorporates community skills curated from [Awesome Claude Skills](https://github.com/BehiSecc/awesome-claude-skills).*
 
 ## Third-Party Skills
 

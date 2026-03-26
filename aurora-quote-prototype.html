@@ -1,0 +1,974 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Aurora Quote — Prototype</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.development.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.development.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:'Inter',system-ui,-apple-system,sans-serif}
+    input[type=range]{-webkit-appearance:none;width:100%;height:6px;border-radius:3px;background:#E5E7EB;outline:none}
+    input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:22px;height:22px;border-radius:50%;background:#F0A500;cursor:pointer;box-shadow:0 1px 4px rgba(0,0,0,.2)}
+    input[type=range]::-moz-range-thumb{width:22px;height:22px;border-radius:50%;background:#F0A500;cursor:pointer;border:none}
+    input[type=text],input[type=email]{font-family:inherit}
+    button{font-family:inherit}
+    ::-webkit-scrollbar{width:6px}::-webkit-scrollbar-track{background:#f1f1f1}::-webkit-scrollbar-thumb{background:#ccc;border-radius:3px}
+  </style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { useState } = React;
+const Y="#F0A500",DARK="#111111",GRAY="#6B7280",LIGHT="#F9F8F5",WHITE="#FFFFFF";
+
+// ── ZIP DATA ──────────────────────────────────────────────────────────────────
+const ZIP_DATA={
+  "99501":{city:"Anchorage",   state:"AK",utilities:["Municipal Light and Power","Chugach Electric","Matanuska Electric","Don't know"]},
+  "99502":{city:"Anchorage",   state:"AK",utilities:["Municipal Light and Power","Chugach Electric","Matanuska Electric","Don't know"]},
+  "94102":{city:"San Francisco",state:"CA",utilities:["PG&E","SF CleanPowerSF","Don't know"]},
+  "10001":{city:"New York",    state:"NY",utilities:["Con Edison","National Grid","Don't know"]},
+  "77494":{city:"Katy",        state:"TX",utilities:["CenterPoint Energy","TXU Energy","Reliant","Don't know"]},
+  "98101":{city:"Seattle",     state:"WA",utilities:["Seattle City Light","Puget Sound Energy","Don't know"]},
+};
+const DEFAULT_ZIP={zip:"99501",city:"Anchorage",state:"AK",utilities:["Municipal Light and Power","Chugach Electric","Matanuska Electric","Don't know"]};
+function getZipData(zip){return ZIP_DATA[zip]?{zip,...ZIP_DATA[zip]}:null;}
+
+// ── STATIC DATA ───────────────────────────────────────────────────────────────
+const INSTALLERS=[
+  {name:"SunPeak Solar",    since:2015,rating:4.9,reviews:312,nabcep:true, logo:"☀️"},
+  {name:"Arctic Solar Co.", since:2018,rating:4.7,reviews:187,nabcep:false,logo:"🌿"},
+  {name:"NorthLight Energy",since:2012,rating:4.8,reviews:421,nabcep:true, logo:"⚡"},
+];
+const FIN_MAP={lowest_payment:"Lease / PPA",no_upfront:"Loan",own_system:"Cash",max_savings:"Loan"};
+const FIN_INFO={
+  "Lease / PPA":{short:"Fixed monthly fee, no ownership.",long:"You pay a set monthly amount to use the panels. The installer owns and maintains them. No upfront cost, zero maintenance hassle."},
+  "Loan":{short:"Own the system, maximize savings.",long:"You borrow to buy the system outright. You own it fully and typically save the most over time. Most popular option."},
+  "Cash":{short:"Pay once, own it forever.",long:"Pay upfront and own the system outright. Maximum 25-year savings, no interest, no monthly payment — just clean energy."},
+};
+const STEPS=[
+  {n:1,icon:"🔍",title:"Site assessment",short:"An installer visits to review your roof and electrical panel.",
+   long:"An Aurora-certified installer visits for 1–2 hours. They confirm roof condition, pitch, shading from trees or neighbors, and whether your electrical panel needs an upgrade. No pressure, no commitment — it's purely an information session.",
+   aurora:"Aurora's satellite imagery pre-analyzes your roof before the installer arrives, so they show up with a preliminary design already in hand — not a blank notepad."},
+  {n:2,icon:"📐",title:"System design",short:"Aurora's AI sizes and designs your system precisely.",
+   long:"Using Aurora's 3D design platform, your installer models your exact roof — every panel, every shadow. The software calculates your system size down to the kilowatt, optimized for your specific roof geometry, pitch, and local sun angles. What used to take hours takes minutes.",
+   aurora:"Aurora's AI measures your roof from satellite imagery and runs a full sun-path simulation to predict exactly how much energy each panel position will produce — every month of the year, not just an annual average."},
+  {n:3,icon:"📋",title:"Permits & approvals",short:"Your installer handles all the paperwork.",
+   long:"Solar requires a building permit and utility interconnection approval. Your installer files everything. Most markets take 2–6 weeks. Aurora's permit automation tool generates the full permit package — including electrical diagrams — automatically, cutting weeks off the typical timeline.",
+   aurora:"Aurora Proposal auto-generates permit-ready documents from the system design. No manual re-entry, fewer errors, faster approvals."},
+  {n:4,icon:"🔧",title:"Installation day",short:"Most installs complete in 1–2 days.",
+   long:"A trained crew mounts the racking, lays conduit, installs panels, and wires your inverter and monitoring unit. Your home stays fully powered throughout. The average residential install completes in 1–2 days depending on system size and roof complexity.",
+   aurora:"Installers use Aurora-generated work orders so every crew member knows exactly what goes where — which panels, which positions, which wiring path. Fewer errors, faster finish."},
+  {n:5,icon:"⚡",title:"Grid connection",short:"Your utility inspects and grants Permission to Operate.",
+   long:"After installation, your utility does a final inspection and grants PTO (Permission to Operate). This is the only step outside your installer's direct control — it typically takes 1–4 weeks depending on your utility's queue. Your installer follows up on your behalf so you don't have to.",
+   aurora:"Aurora's monitoring integration activates the moment your system gets PTO. You can watch live production from day one in the Aurora homeowner app."},
+  {n:6,icon:"💰",title:"You start saving",short:"First bill arrives lower — usually from month one.",
+   long:"Once your system has PTO, your panels start offsetting your usage in real-time. Your next utility bill arrives noticeably lower. As utility rates rise (historically 3–5% per year), your locked-in solar rate becomes more valuable every year — compounding savings over 25 years.",
+   aurora:"The Aurora app shows live production, monthly savings vs. your old bill, payback progress, and your cumulative CO₂ offset — all in one place."},
+];
+
+// ── SAVINGS CALC ──────────────────────────────────────────────────────────────
+function calcSavings(bill,utility,addrDone,ev,homeType,shading){
+  let base=bill*0.78;
+  if(ev==="have") base*=1.35; else if(ev==="planning") base*=1.22;
+  if(homeType==="electric") base*=1.08;
+  if(shading==="heavy") base*=0.70; else if(shading==="some") base*=0.88;
+  const lo=Math.round(base*0.82),hi=Math.round(base*1.12),precise=Math.round(base);
+  if(addrDone) return{label:`$${precise}/mo`,sub:"Precise estimate ✓",color:"#16A34A",bg:"#F0FDF4",border:"#86EFAC",pct:100,precise};
+  if(utility)  return{label:`$${lo}–$${hi}/mo`,sub:"Narrowing in…",color:Y,bg:"#FFFBEB",border:"#FCD34D",pct:66,precise};
+               return{label:`$${Math.round(base*.75)}–$${Math.round(base*1.20)}/mo`,sub:"Rough estimate",color:GRAY,bg:LIGHT,border:"#D1D5DB",pct:33,precise};
+}
+
+// ── MONTHLY PAYMENT CALC ──────────────────────────────────────────────────────
+function calcMonthly(bill,paymentMode,creditScore){
+  const systemCost=bill*110;
+  if(paymentMode==="Cash"){
+    return{payment:0,label:"$0/mo",upfront:`~$${Math.round(systemCost/1000)}k upfront`,range:null,apr:null,
+      note:`Pay ~$${Math.round(systemCost/1000)}k upfront. No monthly payment, maximum 25-year savings.`};
+  }
+  if(paymentMode==="Lease / PPA"){
+    const m=Math.round(bill*0.42);
+    return{payment:m,label:`~$${m}/mo`,upfront:"$0 upfront",range:`$${m-15}–$${m+25}/mo`,apr:null,
+      note:"Fixed monthly rate. No ownership, but zero maintenance responsibility and no upfront cost."};
+  }
+  // Loan
+  const rateMap={excellent:0.049,good:0.059,fair:0.079,building:0.099};
+  const rate=rateMap[creditScore]||0.059;
+  const rHi=rate+0.015;
+  const r=rate/12,rH=rHi/12,t=240;
+  const lo=Math.round(systemCost*r/(1-Math.pow(1+r,-t)));
+  const hi=Math.round(systemCost*rH/(1-Math.pow(1+rH,-t)));
+  return{payment:lo,label:`~$${lo}/mo`,upfront:"$0 upfront",
+    range:`$${lo}–$${hi}/mo`,apr:`${(rate*100).toFixed(1)}–${(rHi*100).toFixed(1)}% APR`,
+    note:`20-year loan. You own the system outright. Most popular option.`};
+}
+
+// ── FINANCING SMART RECOMMENDATION ───────────────────────────────────────────
+function getFinRec(finPriority,creditScore,taxLiability,stayDuration){
+  let rec=FIN_MAP[finPriority]||"Loan",note=null;
+  if(stayDuration==="under5"&&rec!=="Lease / PPA"){rec="Lease / PPA";note="Since you're planning to move within 5 years, Lease/PPA avoids long-term commitment and is easier to transfer.";}
+  if(creditScore==="building"&&rec==="Loan"){rec="Lease / PPA";note="Solar loans typically require a 650+ credit score. Lease/PPA is easier to qualify for while you build credit.";}
+  return{rec,note};
+}
+
+// ── SHARED UI ─────────────────────────────────────────────────────────────────
+function Nav(){
+  return <nav style={{background:DARK,padding:"14px 32px",display:"flex",justifyContent:"space-between",alignItems:"center",position:"sticky",top:0,zIndex:100}}>
+    <span style={{color:WHITE,fontWeight:700,fontSize:20,letterSpacing:-.5}}>⚡ aurora</span>
+    <span style={{color:"#9CA3AF",fontSize:13}}>📞 (888) 356-1435</span>
+  </nav>;
+}
+function Footer(){return <div style={{background:DARK,color:"#9CA3AF",textAlign:"center",padding:"14px 24px",fontSize:13,marginTop:48}}>Questions? Speak to a real solar expert ▾</div>;}
+function Page({children}){return <div style={{minHeight:"100vh",background:LIGHT}}><Nav/><div style={{maxWidth:680,margin:"0 auto",padding:"32px 24px"}}>{children}</div><Footer/></div>;}
+function Back({go,to}){return <button onClick={()=>go(to)} style={{background:"none",border:"none",color:GRAY,cursor:"pointer",fontSize:14,padding:"6px 0",fontWeight:500}}>← Back</button>;}
+function Btn({onClick,children,disabled,full,secondary}){
+  return <button onClick={onClick} disabled={disabled} style={{background:disabled?"#E5E7EB":secondary?WHITE:Y,color:disabled?GRAY:DARK,border:secondary?"1.5px solid #E5E7EB":"none",borderRadius:8,padding:"13px 24px",fontWeight:700,fontSize:15,cursor:disabled?"not-allowed":"pointer",width:full?"100%":"auto",transition:"all .15s"}}>{children}</button>;
+}
+function StatBox({label,value,green}){
+  return <div style={{background:LIGHT,borderRadius:10,padding:"12px 14px"}}><div style={{color:GRAY,fontSize:11,marginBottom:3}}>{label}</div><div style={{fontWeight:700,fontSize:15,color:green?"#16A34A":DARK}}>{value}</div></div>;
+}
+function Widget({children,highlight,done}){
+  return <div style={{background:WHITE,border:`1.5px solid ${done?"#86EFAC":highlight?Y:"#E5E7EB"}`,borderRadius:14,padding:24,transition:"border-color .2s"}}>{children}</div>;
+}
+function WTitle({title,sub,check}){
+  return <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:14}}>
+    <div><div style={{fontWeight:700,fontSize:16,color:DARK,marginBottom:2}}>{title}</div>{sub&&<div style={{color:GRAY,fontSize:13}}>{sub}</div>}</div>
+    {check&&<span style={{color:check==="gold"?Y:"#16A34A",fontSize:18}}>✓</span>}
+  </div>;
+}
+function Chips({options,value,onChange,cols}){
+  return <div style={{display:"grid",gridTemplateColumns:cols?`repeat(${cols},1fr)`:"1fr 1fr",gap:8}}>
+    {options.map(o=>{
+      const key=o.key||o,label=o.label||o,sub=o.sub,sel=value===key;
+      return <div key={key} onClick={()=>onChange(key)}
+        style={{padding:sub?"12px 14px":"10px 14px",borderRadius:8,cursor:"pointer",background:sel?"#FFFBEB":LIGHT,border:sel?`1.5px solid ${Y}`:"1.5px solid transparent",transition:"all .15s"}}>
+        <div style={{fontWeight:sel?700:400,color:sel?DARK:GRAY,fontSize:13}}>{sel?"✓ ":""}{label}</div>
+        {sub&&<div style={{color:GRAY,fontSize:11,marginTop:2}}>{sub}</div>}
+      </div>;
+    })}
+  </div>;
+}
+function InfoNote({color,bg,border,children}){
+  return <div style={{background:bg||"#FFFBEB",border:`1px solid ${border||"#FCD34D"}`,borderRadius:8,padding:"10px 14px",fontSize:13,color:color||"#92400E",marginTop:12,lineHeight:1.5}}>{children}</div>;
+}
+function CtaBox({ready,readyMsg,notReadyMsg,onClick,label,disabled}){
+  return <div style={{background:ready?"#F0FDF4":WHITE,border:`1.5px solid ${ready?"#86EFAC":"#E5E7EB"}`,borderRadius:14,padding:22,textAlign:"center",marginTop:14,transition:"all .3s"}}>
+    <div style={{color:ready?"#15803D":GRAY,fontSize:ready?14:13,fontWeight:ready?600:400,marginBottom:14}}>{ready?readyMsg:notReadyMsg}</div>
+    <Btn onClick={onClick} full disabled={disabled}>{label}</Btn>
+  </div>;
+}
+function AddressWidget({address,setAddress,addrDone,setAddrDone}){
+  const [inp,setInp]=useState(address);
+  return <Widget done={addrDone}>
+    <WTitle title="Your home address" sub="Unlocks a precise, roof-specific estimate" check={addrDone?"green":null}/>
+    <div style={{background:"#EFF6FF",borderRadius:8,padding:"9px 14px",fontSize:12,color:"#1D4ED8",marginBottom:14}}>🔒 Only used for your solar analysis. Never shared without permission.</div>
+    {!addrDone
+      ?<div>
+        <input type="text" value={inp} onChange={e=>setInp(e.target.value)} placeholder="380 E 11th Ave, Anchorage, AK 99501"
+          style={{width:"100%",padding:"11px 14px",borderRadius:8,border:"1.5px solid #D1D5DB",fontSize:14,outline:"none",marginBottom:8}}/>
+        {inp.length>5&&<div onClick={()=>{setAddress(inp);setAddrDone(true);}}
+          style={{padding:"10px 14px",background:LIGHT,border:"1px solid #E5E7EB",borderRadius:8,fontSize:14,cursor:"pointer",color:DARK}}>📍 {inp}</div>}
+      </div>
+      :<div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+        <div style={{fontSize:14,color:"#15803D",fontWeight:500}}>📍 {address}</div>
+        <button onClick={()=>setAddrDone(false)} style={{background:"none",border:"none",color:GRAY,fontSize:12,cursor:"pointer"}}>Edit</button>
+      </div>
+    }
+  </Widget>;
+}
+
+// ── PAYMENT TOGGLE ────────────────────────────────────────────────────────────
+function PaymentToggle({paymentMode,setPaymentMode,rec}){
+  const modes=[
+    {key:"Loan",       icon:"🏦",label:"Loan",  sub:"Own it, max long-term savings"},
+    {key:"Lease / PPA",icon:"📋",label:"Lease", sub:"$0 down, fixed payment"},
+    {key:"Cash",       icon:"💵",label:"Cash",  sub:"Pay once, save most"},
+  ];
+  return <Widget>
+    <WTitle title="How would you like to pay?" sub="Tap to see how the numbers change"/>
+    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8}}>
+      {modes.map(m=>{
+        const sel=paymentMode===m.key;
+        const isRec=rec&&rec===m.key&&!sel;
+        return <div key={m.key} onClick={()=>setPaymentMode(m.key)}
+          style={{padding:"12px 10px",borderRadius:10,cursor:"pointer",textAlign:"center",background:sel?"#FFFBEB":LIGHT,border:sel?`2px solid ${Y}`:"1.5px solid transparent",transition:"all .15s"}}>
+          <div style={{fontSize:20,marginBottom:4}}>{m.icon}</div>
+          <div style={{fontWeight:sel?700:500,color:sel?DARK:GRAY,fontSize:13}}>{m.label}</div>
+          <div style={{color:GRAY,fontSize:11,marginTop:2}}>{m.sub}</div>
+          {sel&&<div style={{color:Y,fontSize:10,marginTop:4,fontWeight:700}}>SELECTED ✓</div>}
+          {isRec&&<div style={{color:"#15803D",fontSize:10,marginTop:4,fontWeight:600}}>RECOMMENDED</div>}
+        </div>;
+      })}
+    </div>
+  </Widget>;
+}
+
+// ── STICKY SAVINGS BAR ────────────────────────────────────────────────────────
+function StickySavings({sv,mp,paymentMode}){
+  const net=mp&&paymentMode!=="Cash"&&mp.payment>0?sv.precise-mp.payment:null;
+  return <div style={{position:"sticky",top:52,zIndex:90,background:sv.bg,borderBottom:`1.5px solid ${sv.border}`,padding:"9px 0 8px",marginBottom:16,display:"flex",justifyContent:"space-between",alignItems:"center",transition:"all .4s"}}>
+    <div style={{display:"flex",alignItems:"center",gap:10}}>
+      <div style={{fontWeight:800,fontSize:20,color:sv.pct===100?"#15803D":DARK,letterSpacing:-.5,transition:"all .3s"}}>{sv.label}</div>
+      <div style={{fontSize:10,color:sv.color,fontWeight:600,textTransform:"uppercase",letterSpacing:.5}}>{sv.sub}</div>
+    </div>
+    <div style={{display:"flex",alignItems:"center",gap:10}}>
+      {net!==null&&<div style={{fontSize:12,color:GRAY}}>net: <strong style={{color:net>=0?"#15803D":"#DC2626"}}>{net>=0?"+":""}{`$${net}/mo`}</strong></div>}
+      <div style={{background:"rgba(0,0,0,.12)",borderRadius:4,height:4,width:56,overflow:"hidden"}}>
+        <div style={{width:`${sv.pct}%`,height:"100%",background:sv.color,borderRadius:4,transition:"width .5s ease"}}/>
+      </div>
+    </div>
+  </div>;
+}
+
+// ── LOCATION BAR ──────────────────────────────────────────────────────────────
+function LocationBar({location,setLocation}){
+  const [editing,setEditing]=useState(false);
+  const [inp,setInp]=useState(location.zip);
+  const [error,setError]=useState(false);
+  function submit(){const f=getZipData(inp.trim());if(f){setLocation(f);setEditing(false);setError(false);}else setError(true);}
+  return <div style={{display:"flex",justifyContent:"center",marginBottom:20,position:"relative"}}>
+    {!editing
+      ?<div style={{display:"inline-flex",alignItems:"center",gap:8,background:WHITE,border:"1.5px solid #E5E7EB",borderRadius:24,padding:"8px 16px",fontSize:13}}>
+        <span>📍</span>
+        <span style={{color:DARK,fontWeight:500}}>{location.city}, {location.state} {location.zip}</span>
+        <button onClick={()=>{setInp(location.zip);setEditing(true);setError(false);}} style={{background:"none",border:"none",color:Y,fontWeight:600,fontSize:12,cursor:"pointer",padding:"0 0 0 4px"}}>Change</button>
+      </div>
+      :<div style={{display:"inline-flex",alignItems:"center",gap:8,background:WHITE,border:`1.5px solid ${error?"#EF4444":Y}`,borderRadius:24,padding:"6px 6px 6px 14px",fontSize:13}}>
+        <span>📍</span>
+        <input type="text" value={inp} onChange={e=>setInp(e.target.value)} onKeyDown={e=>e.key==="Enter"&&submit()} placeholder="Enter ZIP" maxLength={5} autoFocus
+          style={{border:"none",outline:"none",width:70,fontSize:13,fontFamily:"inherit",color:DARK,background:"transparent"}}/>
+        <button onClick={submit} style={{background:Y,border:"none",borderRadius:20,padding:"5px 12px",fontWeight:700,fontSize:12,cursor:"pointer",color:DARK}}>Go</button>
+        <button onClick={()=>{setEditing(false);setError(false);}} style={{background:"none",border:"none",color:GRAY,cursor:"pointer",fontSize:13,padding:"0 4px"}}>✕</button>
+      </div>
+    }
+    {error&&<div style={{position:"absolute",top:42,color:"#EF4444",fontSize:12,fontWeight:500}}>ZIP not found — try 99501, 77494, or 10001</div>}
+  </div>;
+}
+
+// ── HOME ──────────────────────────────────────────────────────────────────────
+function Home({go,setPath,location,setLocation,isOwner,setIsOwner}){
+  const paths=[
+    {key:"savings",  icon:"💰",title:"Show me my savings",             sub:"See how much you'd save based on your actual roof and usage."},
+    {key:"financing",icon:"📋",title:"Help me understand my options",  sub:"Confused about leasing vs. buying? We'll break it down."},
+    {key:"education",icon:"🏠",title:"How does solar work for my home?",sub:"New to solar? Walk through the whole process step by step."},
+    {key:"battery",  icon:"🔋",title:"Battery & backup power",         sub:"Interested in energy independence or backup storage?",badge:"New"},
+  ];
+  return <div style={{minHeight:"100vh",background:LIGHT}}>
+    <Nav/>
+    <div style={{maxWidth:620,margin:"0 auto",padding:"48px 24px"}}>
+      <div style={{textAlign:"center",marginBottom:28}}>
+        <div style={{fontSize:13,color:Y,fontWeight:600,letterSpacing:1,marginBottom:10,textTransform:"uppercase"}}>Solar made simple</div>
+        <h1 style={{fontSize:36,fontWeight:800,color:DARK,margin:"0 0 12px",lineHeight:1.2}}>What brings you here today?</h1>
+        <p style={{color:GRAY,fontSize:16,margin:0}}>Choose the experience that fits where you are — we'll meet you there.</p>
+      </div>
+      <LocationBar location={location} setLocation={setLocation}/>
+      <div style={{background:WHITE,border:"1.5px solid #E5E7EB",borderRadius:14,padding:"16px 20px",marginBottom:16}}>
+        <div style={{fontWeight:600,fontSize:14,color:DARK,marginBottom:10}}>Do you own your home?</div>
+        <div style={{display:"flex",gap:8}}>
+          {[{k:"own",l:"Yes, I own it 🏠"},{k:"rent",l:"I'm renting 🔑"},{k:"other",l:"Other / Not sure"}].map(o=>(
+            <div key={o.k} onClick={()=>setIsOwner(o.k)}
+              style={{flex:1,padding:"9px 12px",borderRadius:8,cursor:"pointer",textAlign:"center",fontSize:13,fontWeight:isOwner===o.k?700:400,background:isOwner===o.k?"#FFFBEB":LIGHT,border:isOwner===o.k?`1.5px solid ${Y}`:"1.5px solid transparent",transition:"all .15s"}}>
+              {isOwner===o.k?"✓ ":""}{o.l}
+            </div>
+          ))}
+        </div>
+        {(isOwner==="rent"||isOwner==="other")&&<div style={{marginTop:12,background:"#EFF6FF",border:"1px solid #BFDBFE",borderRadius:10,padding:"14px 16px"}}>
+          <div style={{fontWeight:600,fontSize:14,color:"#1E40AF",marginBottom:6}}>
+            {isOwner==="rent"?"🔑 Renting? Balcony solar might be perfect for you.":"💡 Don't own yet? Balcony solar is a great way to start."}
+          </div>
+          <div style={{color:"#1D4ED8",fontSize:13,lineHeight:1.6,marginBottom:14}}>Plug-in solar panels for balconies and patios let renters and apartment residents generate their own energy — no landlord approval needed in most cases. Typical setups offset 20–40% of a studio or 1BR's electricity bill.</div>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:14}}>
+            {[{icon:"🔌",t:"Plug & play",d:"No installation, no permits"},{icon:"💸",t:"From ~$400",d:"Portable, renter-friendly"},{icon:"📦",t:"Take it with you",d:"Moves when you move"},{icon:"⚡",t:"Real savings",d:"20–40% bill offset"}].map(f=>(
+              <div key={f.t} style={{background:WHITE,borderRadius:8,padding:"10px 12px",display:"flex",gap:10,alignItems:"flex-start"}}>
+                <span style={{fontSize:18}}>{f.icon}</span>
+                <div><div style={{fontWeight:600,color:DARK,fontSize:12}}>{f.t}</div><div style={{color:GRAY,fontSize:11,marginTop:1}}>{f.d}</div></div>
+              </div>
+            ))}
+          </div>
+          <a href="https://www.google.com/search?q=balcony+solar+panels" target="_blank" rel="noopener noreferrer"
+            style={{display:"block",background:"#1D4ED8",color:WHITE,borderRadius:8,padding:"11px 0",textAlign:"center",fontWeight:700,fontSize:14,textDecoration:"none"}}>
+            Explore balcony solar options →
+          </a>
+          <div style={{color:"#93C5FD",fontSize:11,textAlign:"center",marginTop:8}}>Opens our affiliate partner page</div>
+        </div>}
+      </div>
+      <div style={{display:"flex",flexDirection:"column",gap:10,marginBottom:18,opacity:(isOwner==="rent"||isOwner==="other")?.4:1,pointerEvents:(isOwner==="rent"||isOwner==="other")?"none":"auto",transition:"opacity .3s"}}>
+        {paths.map(p=>(
+          <div key={p.key} onClick={()=>{setPath(p.key);go(p.key);}}
+            style={{background:WHITE,border:"1.5px solid #E5E7EB",borderRadius:14,padding:"16px 20px",cursor:"pointer",display:"flex",gap:14,alignItems:"flex-start"}}
+            onMouseEnter={e=>e.currentTarget.style.borderColor=Y}
+            onMouseLeave={e=>e.currentTarget.style.borderColor="#E5E7EB"}>
+            <div style={{fontSize:26,flexShrink:0}}>{p.icon}</div>
+            <div style={{flex:1}}>
+              <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:3}}>
+                <span style={{fontWeight:700,fontSize:15,color:DARK}}>{p.title}</span>
+                {p.badge&&<span style={{background:Y,color:DARK,fontSize:10,fontWeight:700,padding:"2px 7px",borderRadius:20}}>{p.badge}</span>}
+              </div>
+              <div style={{color:GRAY,fontSize:13}}>{p.sub}</div>
+            </div>
+            <div style={{color:GRAY,fontSize:20,alignSelf:"center"}}>›</div>
+          </div>
+        ))}
+      </div>
+      <div style={{textAlign:"center"}}>
+        <button onClick={()=>{setPath("savings");go("installers");}} style={{background:"none",border:"none",color:GRAY,fontSize:13,cursor:"pointer",textDecoration:"underline"}}>Skip — just show me installers near me</button>
+      </div>
+    </div>
+    <Footer/>
+  </div>;
+}
+
+// ── SAVINGS ───────────────────────────────────────────────────────────────────
+function Savings({go,bill,setBill,utility,setUtility,address,setAddress,addrDone,setAddrDone,location,ev,setEv,homeType,setHomeType,shading,setShading,creditScore}){
+  const sv=calcSavings(bill,utility,addrDone,ev,homeType,shading);
+  const qualDone=[!!ev,!!homeType,!!shading].filter(Boolean).length;
+  const totalDone=[true,!!utility,addrDone].filter(Boolean).length;
+
+  return <Page>
+    <Back go={go} to="home"/>
+    <StickySavings sv={sv}/>
+
+    {/* Savings hero */}
+    <div style={{background:sv.bg,border:`2px solid ${sv.border}`,borderRadius:16,padding:"22px 24px",marginBottom:14,textAlign:"center",transition:"all .4s"}}>
+      <div style={{fontSize:48,fontWeight:900,color:sv.pct===100?"#15803D":DARK,letterSpacing:-2,marginBottom:2,transition:"all .3s"}}>{sv.label}</div>
+      <div style={{color:GRAY,fontSize:13,marginBottom:10}}>estimated monthly savings</div>
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8,maxWidth:360,margin:"0 auto"}}>
+        <StatBox label="25-yr savings" value={`~$${(sv.precise*12*22).toLocaleString()}`} green/>
+        <StatBox label="Payback" value={shading==="heavy"?"8–11 yrs":"6–8 yrs"}/>
+        <StatBox label="CO₂/yr" value={ev==="have"?"~6.8t":"~4.2t"}/>
+      </div>
+    </div>
+
+    <div style={{display:"flex",flexDirection:"column",gap:14,marginBottom:22}}>
+
+      {/* Bill slider */}
+      <Widget>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:18}}>
+          <div><div style={{fontWeight:700,fontSize:16,color:DARK}}>Monthly electric bill</div><div style={{color:GRAY,fontSize:13}}>Your current usage baseline</div></div>
+          <div style={{fontWeight:800,fontSize:28,color:DARK}}>${bill}</div>
+        </div>
+        <input type="range" min={50} max={800} step={10} value={bill} onChange={e=>setBill(+e.target.value)}/>
+        <div style={{display:"flex",justifyContent:"space-between",color:GRAY,fontSize:12,marginTop:6}}><span>$50</span><span>$400</span><span>$800+</span></div>
+      </Widget>
+
+      {/* Utility */}
+      <Widget highlight={!!utility}>
+        <WTitle title={`Utility provider in ${location.city}`} sub="Tightens your savings estimate" check={utility?"gold":null}/>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+          {(location.utilities||["Municipal Light and Power","Chugach Electric","Matanuska Electric","Don't know"]).map(u=>(
+            <div key={u} onClick={()=>setUtility(u)}
+              style={{padding:"10px 14px",borderRadius:8,cursor:"pointer",fontSize:13,fontWeight:utility===u?700:400,color:utility===u?DARK:GRAY,background:utility===u?"#FFFBEB":LIGHT,border:utility===u?`1.5px solid ${Y}`:"1.5px solid transparent",transition:"all .15s"}}>
+              {utility===u?"✓ ":""}{u}
+            </div>
+          ))}
+        </div>
+      </Widget>
+
+      {/* Qualifiers */}
+      <Widget highlight={qualDone>0}>
+        <WTitle title="Tell us a bit more" sub={`Refines your estimate — ${3-qualDone} question${3-qualDone!==1?"s":""} left`} check={qualDone===3?"gold":null}/>
+        <div style={{marginBottom:16}}>
+          <div style={{fontWeight:600,fontSize:13,color:DARK,marginBottom:8}}>Do you have or plan to get an electric vehicle? ⚡</div>
+          <Chips cols={3} value={ev} onChange={setEv} options={[{key:"have",label:"Yes, I have one"},{key:"planning",label:"Planning to get one"},{key:"no",label:"No"}]}/>
+          {ev==="have"&&<InfoNote>🚗 EVs add ~35% more energy load — your system needs to be bigger, but savings jump significantly.</InfoNote>}
+          {ev==="planning"&&<InfoNote>🚗 We'll size your system to handle your future EV too.</InfoNote>}
+        </div>
+        <div style={{marginBottom:16}}>
+          <div style={{fontWeight:600,fontSize:13,color:DARK,marginBottom:8}}>Is your home mostly gas or all-electric? 🔥</div>
+          <Chips cols={2} value={homeType} onChange={setHomeType} options={[{key:"gas",label:"Gas appliances",sub:"Stove, heat, water heater"},{key:"electric",label:"All-electric",sub:"Everything runs on electricity"}]}/>
+          {homeType==="electric"&&<InfoNote>⚡ All-electric homes have higher usage and more solar potential — your savings estimate is higher.</InfoNote>}
+        </div>
+        <div>
+          <div style={{fontWeight:600,fontSize:13,color:DARK,marginBottom:8}}>Any significant shading on your roof? 🌳</div>
+          <Chips cols={3} value={shading} onChange={setShading} options={[{key:"none",label:"None — full sun"},{key:"some",label:"Some shading"},{key:"heavy",label:"Heavy shading"}]}/>
+          {shading==="heavy"&&<InfoNote color="#7C3AED" bg="#F5F3FF" border="#DDD6FE">🌳 Heavy shading can reduce production by up to 30%. Your installer will assess this during site visit.</InfoNote>}
+        </div>
+      </Widget>
+
+      {/* Address */}
+      <AddressWidget address={address} setAddress={setAddress} addrDone={addrDone} setAddrDone={setAddrDone}/>
+    </div>
+
+    <CtaBox
+      ready={totalDone===3}
+      readyMsg="✓ Profile complete — here are your matched installers"
+      notReadyMsg={`${3-totalDone} more step${3-totalDone!==1?"s":""} for a precise estimate — or continue now.`}
+      onClick={()=>go("installers")}
+      label={totalDone===3?"See my matched installers →":"See installers →"}
+    />
+  </Page>;
+}
+
+// ── FINANCING ─────────────────────────────────────────────────────────────────
+function Financing({go,finPriority,setFinPriority,bill,setBill,utility,setUtility,address,setAddress,addrDone,setAddrDone,creditScore,setCreditScore,taxLiability,setTaxLiability,stayDuration,setStayDuration,location,paymentMode,setPaymentMode}){
+  const [expanded,setExpanded]=useState(null);
+  const {rec,note}=getFinRec(finPriority,creditScore,taxLiability,stayDuration);
+  const activeMode=rec||paymentMode;
+  const sv=calcSavings(bill,utility,addrDone,null,null,null);
+  const mp=calcMonthly(bill,activeMode,creditScore);
+  const netSavings=sv.precise-(mp.payment||0);
+  const qualDone=[!!creditScore,!!stayDuration].filter(Boolean).length;
+  const totalDone=[!!finPriority,addrDone].filter(Boolean).length;
+
+  return <Page>
+    <Back go={go} to="home"/>
+    <StickySavings sv={sv} mp={mp} paymentMode={activeMode}/>
+
+    {/* Live recommendation hero */}
+    <div style={{background:finPriority?"#FFFBEB":LIGHT,border:`2px solid ${finPriority?Y:"#E5E7EB"}`,borderRadius:16,padding:"22px 26px",marginBottom:8,minHeight:100,transition:"all .4s"}}>
+      {!finPriority
+        ?<div style={{textAlign:"center",padding:"10px 0"}}>
+          <div style={{fontSize:24,marginBottom:8}}>📋</div>
+          <div style={{fontWeight:700,fontSize:18,color:DARK,marginBottom:4}}>Tell us what matters most</div>
+          <div style={{color:GRAY,fontSize:14}}>Your recommendation and payment range appear here instantly</div>
+        </div>
+        :<div>
+          <div style={{display:"inline-block",background:Y,color:DARK,fontSize:11,fontWeight:700,padding:"3px 10px",borderRadius:20,marginBottom:8}}>BEST FIT FOR YOU</div>
+          <div style={{fontWeight:800,fontSize:24,color:DARK,marginBottom:6}}>{rec}</div>
+          <div style={{color:"#78350F",fontSize:14,lineHeight:1.6,marginBottom:10}}>{FIN_INFO[rec]?.long}</div>
+          {note&&<InfoNote color="#1E40AF" bg="#EFF6FF" border="#BFDBFE">💡 {note}</InfoNote>}
+          {/* Payment range + net savings */}
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginTop:14}}>
+            {rec==="Cash"
+              ?<>
+                <div style={{background:WHITE,borderRadius:8,padding:"10px 14px"}}>
+                  <div style={{color:GRAY,fontSize:11,marginBottom:2}}>Total system cost</div>
+                  <div style={{fontWeight:700,color:DARK,fontSize:16}}>~${Math.round(bill*110/1000)}k</div>
+                  <div style={{color:GRAY,fontSize:11,marginTop:1}}>$0/mo after payoff</div>
+                </div>
+                <div style={{background:"#F0FDF4",borderRadius:8,padding:"10px 14px"}}>
+                  <div style={{color:GRAY,fontSize:11,marginBottom:2}}>Monthly savings</div>
+                  <div style={{fontWeight:700,color:"#15803D",fontSize:16}}>{sv.label}</div>
+                  <div style={{color:GRAY,fontSize:11,marginTop:1}}>est. from ${bill}/mo bill</div>
+                </div>
+              </>
+              :<>
+                <div style={{background:WHITE,borderRadius:8,padding:"10px 14px"}}>
+                  <div style={{color:GRAY,fontSize:11,marginBottom:2}}>Monthly payment range</div>
+                  <div style={{fontWeight:700,color:DARK,fontSize:16}}>{mp.range||mp.label}</div>
+                  <div style={{color:GRAY,fontSize:11,marginTop:1}}>{mp.apr||"Based on your profile"}</div>
+                </div>
+                <div style={{background:"#F0FDF4",borderRadius:8,padding:"10px 14px"}}>
+                  <div style={{color:GRAY,fontSize:11,marginBottom:2}}>Net monthly benefit</div>
+                  <div style={{fontWeight:700,color:netSavings>0?"#15803D":"#DC2626",fontSize:16}}>{netSavings>0?"+":""}{`$${netSavings}/mo`}</div>
+                  <div style={{color:GRAY,fontSize:11,marginTop:1}}>savings minus payment</div>
+                </div>
+              </>
+            }
+          </div>
+        </div>
+      }
+    </div>
+
+    <div style={{display:"flex",flexDirection:"column",gap:14,marginTop:14}}>
+
+      {/* Priority picker */}
+      <Widget highlight={!!finPriority}>
+        <WTitle title="What matters most to you?" sub="Shapes your recommendation above" check={finPriority?"gold":null}/>
+        <div style={{display:"flex",flexDirection:"column",gap:8}}>
+          {[
+            {key:"lowest_payment",icon:"📉",label:"Lowest monthly payment",sub:"Minimize what I pay each month"},
+            {key:"no_upfront",    icon:"🆓",label:"No money out of pocket",sub:"I don't want to pay anything upfront"},
+            {key:"own_system",    icon:"🏠",label:"I want to own the system",sub:"Full ownership and maximum long-term savings"},
+            {key:"max_savings",   icon:"💰",label:"Maximum long-term savings",sub:"I'll pay more now for bigger returns"},
+          ].map(o=>(
+            <div key={o.key} onClick={()=>setFinPriority(o.key)}
+              style={{display:"flex",alignItems:"center",gap:12,padding:"11px 14px",borderRadius:10,cursor:"pointer",background:finPriority===o.key?"#FFFBEB":LIGHT,border:finPriority===o.key?`1.5px solid ${Y}`:"1.5px solid transparent",transition:"all .15s"}}>
+              <span style={{fontSize:20}}>{o.icon}</span>
+              <div style={{flex:1}}>
+                <div style={{fontWeight:finPriority===o.key?700:400,color:finPriority===o.key?DARK:GRAY,fontSize:14}}>{o.label}</div>
+                <div style={{color:GRAY,fontSize:12}}>{o.sub}</div>
+              </div>
+              {finPriority===o.key&&<span style={{color:Y}}>✓</span>}
+            </div>
+          ))}
+        </div>
+      </Widget>
+
+      {/* Qualification questions */}
+      <Widget highlight={qualDone>0}>
+        <WTitle title="Get accurate numbers" sub={`${2-qualDone} question${2-qualDone!==1?"s":""} — updates your payment range instantly`} check={qualDone===2?"gold":null}/>
+        <div style={{marginBottom:16}}>
+          <div style={{fontWeight:600,fontSize:13,color:DARK,marginBottom:8}}>Roughly what's your credit score? 💳</div>
+          <Chips cols={2} value={creditScore} onChange={setCreditScore} options={[
+            {key:"excellent",label:"Excellent (750+)"},
+            {key:"good",     label:"Good (700–749)"},
+            {key:"fair",     label:"Fair (640–699)"},
+            {key:"building", label:"Building (<640)"},
+          ]}/>
+          {creditScore==="building"&&<InfoNote>💳 No worries — Lease/PPA options typically have more flexible credit requirements.</InfoNote>}
+          {creditScore==="excellent"&&<InfoNote color="#15803D" bg="#F0FDF4" border="#86EFAC">✓ Excellent credit — you should qualify for the best loan rates (from ~4.9% APR).</InfoNote>}
+          {creditScore==="good"&&<InfoNote color="#15803D" bg="#F0FDF4" border="#86EFAC">✓ Good credit qualifies you for most solar loan products (from ~5.9% APR).</InfoNote>}
+        </div>
+        <div>
+          <div style={{fontWeight:600,fontSize:13,color:DARK,marginBottom:8}}>How long do you plan to stay in this home? 📅</div>
+          <Chips cols={3} value={stayDuration} onChange={setStayDuration} options={[{key:"under5",label:"Under 5 years"},{key:"5to10",label:"5–10 years"},{key:"10plus",label:"10+ years"}]}/>
+          {stayDuration==="under5"&&<InfoNote>🏡 Moving soon? A Lease/PPA is easier to transfer to a new buyer or cancel.</InfoNote>}
+          {stayDuration==="10plus"&&<InfoNote color="#15803D" bg="#F0FDF4" border="#86EFAC">✓ Long-term homeowners get the most value — full savings compounding over 25 years.</InfoNote>}
+        </div>
+      </Widget>
+
+      {/* Compare all options */}
+      <Widget>
+        <WTitle title="All payment options compared" sub="Tap any to see the full picture"/>
+        <div style={{display:"flex",flexDirection:"column",gap:8}}>
+          {Object.entries(FIN_INFO).map(([k,v])=>{
+            const isPref=k===rec,isOpen=expanded===k;
+            const mpc=calcMonthly(bill,k,creditScore);
+            return <div key={k} style={{border:isPref?`2px solid ${Y}`:"1.5px solid #E5E7EB",borderRadius:10,overflow:"hidden"}}>
+              <div onClick={()=>setExpanded(isOpen?null:k)} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"13px 16px",cursor:"pointer",background:isPref?"#FFFBEB":WHITE}}>
+                <div style={{display:"flex",alignItems:"center",gap:8}}>
+                  {isPref&&<span style={{background:Y,color:DARK,fontSize:10,fontWeight:700,padding:"2px 7px",borderRadius:20}}>YOUR FIT</span>}
+                  <span style={{fontWeight:600,color:DARK,fontSize:14}}>{k}</span>
+                </div>
+                <div style={{display:"flex",alignItems:"center",gap:8}}>
+                  <span style={{color:DARK,fontWeight:600,fontSize:13}}>{mpc.range||mpc.label}</span>
+                  <span style={{color:GRAY}}>{isOpen?"▾":"▸"}</span>
+                </div>
+              </div>
+              {isOpen&&<div style={{padding:"0 16px 14px",background:isPref?"#FFFBEB":WHITE}}>
+                <div style={{color:"#78350F",fontSize:13,lineHeight:1.6,borderTop:"1px solid #FDE68A",paddingTop:10,marginBottom:10}}>{v.long}</div>
+                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+                  <StatBox label="Monthly payment" value={mpc.range||mpc.label}/>
+                  <StatBox label="Out-of-pocket today" value={mpc.upfront}/>
+                </div>
+              </div>}
+            </div>;
+          })}
+        </div>
+      </Widget>
+
+      {/* Pre-installer data collection */}
+      <Widget highlight={!!bill}>
+        <WTitle title="Sharpen your numbers" sub="Your bill drives the payment ranges and savings estimate above"/>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}}>
+          <div style={{fontWeight:600,fontSize:13,color:DARK}}>Monthly electric bill</div>
+          <div style={{fontWeight:800,fontSize:24,color:DARK}}>${bill}</div>
+        </div>
+        <input type="range" min={50} max={800} step={10} value={bill} onChange={e=>setBill(+e.target.value)}/>
+        <div style={{display:"flex",justifyContent:"space-between",color:GRAY,fontSize:12,marginTop:6}}><span>$50</span><span>$400</span><span>$800+</span></div>
+      </Widget>
+
+      <Widget highlight={!!utility}>
+        <WTitle title="Utility provider" sub="Calibrates local rate data" check={utility?"gold":null}/>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+          {(location.utilities||["Municipal Light and Power","Chugach Electric","Matanuska Electric","Don't know"]).map(u=>(
+            <div key={u} onClick={()=>setUtility(u)}
+              style={{padding:"10px 14px",borderRadius:8,cursor:"pointer",fontSize:13,fontWeight:utility===u?700:400,color:utility===u?DARK:GRAY,background:utility===u?"#FFFBEB":LIGHT,border:utility===u?`1.5px solid ${Y}`:"1.5px solid transparent",transition:"all .15s"}}>
+              {utility===u?"✓ ":""}{u}
+            </div>
+          ))}
+        </div>
+      </Widget>
+
+      <AddressWidget address={address} setAddress={setAddress} addrDone={addrDone} setAddrDone={setAddrDone}/>
+    </div>
+
+    <CtaBox
+      ready={totalDone===2}
+      readyMsg="✓ Ready — here are installers matched to your financing profile"
+      notReadyMsg={`${2-totalDone} more step${2-totalDone!==1?"s":""} for personalised results — or continue now.`}
+      onClick={()=>go("installers")}
+      label={totalDone===2?"See my matched installers →":"See installers →"}
+      disabled={!finPriority}
+    />
+  </Page>;
+}
+
+// ── EDUCATION ─────────────────────────────────────────────────────────────────
+function Education({go,address,setAddress,addrDone,setAddrDone,motivation,setMotivation,hasHOA,setHasHOA,roofAge,setRoofAge,bill,setBill,utility,setUtility,location,creditScore,setCreditScore}){
+  const [openStep,setOpenStep]=useState(null);
+  const [stage,setStage]=useState(null);
+  const qualDone=[!!motivation,!!hasHOA,!!roofAge].filter(Boolean).length;
+  const sv=calcSavings(bill,utility,addrDone,null,null,null);
+  const mp=calcMonthly(bill,"Loan",creditScore);
+
+  return <Page>
+    <Back go={go} to="home"/>
+    <StickySavings sv={sv}/>
+
+    {/* Savings hero */}
+    <div style={{background:sv.bg,border:`2px solid ${sv.border}`,borderRadius:16,padding:"18px 22px",marginBottom:14,display:"flex",justifyContent:"space-between",alignItems:"center",transition:"all .4s"}}>
+      <div>
+        <div style={{fontWeight:800,fontSize:30,color:sv.pct===100?"#15803D":DARK,letterSpacing:-1,transition:"all .3s"}}>{sv.label}</div>
+        <div style={{color:GRAY,fontSize:13,marginTop:2}}>estimated monthly savings</div>
+      </div>
+      <div style={{textAlign:"right"}}>
+        <div style={{fontSize:11,color:GRAY,marginBottom:2}}>25-year total</div>
+        <div style={{fontWeight:700,fontSize:18,color:"#15803D"}}>~${(sv.precise*12*22).toLocaleString()}</div>
+        {mp.range&&<div style={{fontSize:11,color:GRAY,marginTop:2}}>Typical loan: {mp.range}</div>}
+      </div>
+    </div>
+
+    <div style={{display:"flex",flexDirection:"column",gap:14}}>
+
+      {/* Journey stage */}
+      <Widget>
+        <WTitle title="Where are you in your journey?" sub="We'll highlight what's most relevant" check={stage!==null?"gold":null}/>
+        <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+          {[{key:0,label:"Just curious 🤔"},{key:1,label:"Researching 🔍"},{key:2,label:"Ready for quotes 🚀"}].map(s=>(
+            <div key={s.key} onClick={()=>setStage(s.key)}
+              style={{padding:"9px 16px",borderRadius:20,cursor:"pointer",fontSize:13,fontWeight:stage===s.key?700:400,background:stage===s.key?"#FFFBEB":LIGHT,border:stage===s.key?`1.5px solid ${Y}`:"1.5px solid #E5E7EB",transition:"all .15s"}}>
+              {s.label}
+            </div>
+          ))}
+        </div>
+        {stage===0&&<InfoNote>👋 No pressure. Browse at your own pace — we'll highlight the basics first.</InfoNote>}
+        {stage===2&&<InfoNote color="#15803D" bg="#F0FDF4" border="#86EFAC">🚀 Scroll to the bottom when you're ready — we'll match you with installers now.</InfoNote>}
+      </Widget>
+
+      {/* Qualifying questions */}
+      <Widget highlight={qualDone>0}>
+        <WTitle title="A few quick questions" sub={`Personalises your walkthrough — ${3-qualDone} left`} check={qualDone===3?"gold":null}/>
+        <div style={{marginBottom:16}}>
+          <div style={{fontWeight:600,fontSize:13,color:DARK,marginBottom:8}}>What's your main reason for considering solar? 🌟</div>
+          <Chips cols={2} value={motivation} onChange={setMotivation} options={[
+            {key:"savings",     label:"💰 Save on bills"},
+            {key:"independence",label:"⚡ Energy independence"},
+            {key:"environment", label:"🌱 Go green"},
+            {key:"value",       label:"🏡 Increase home value"},
+          ]}/>
+          {motivation==="value"&&<InfoNote>🏡 Homes with solar sell for 4–6% more on average and typically sell faster.</InfoNote>}
+          {motivation==="independence"&&<InfoNote>⚡ For full energy independence, you'll likely want battery storage too. We'll cover that in the steps below.</InfoNote>}
+        </div>
+        <div style={{marginBottom:16}}>
+          <div style={{fontWeight:600,fontSize:13,color:DARK,marginBottom:8}}>Do you have a homeowners association (HOA)? 📋</div>
+          <Chips cols={3} value={hasHOA} onChange={setHasHOA} options={[{key:"yes",label:"Yes"},{key:"no",label:"No"},{key:"unsure",label:"Not sure"}]}/>
+          {hasHOA==="yes"&&<InfoNote>📋 Good news — in most US states, HOAs legally cannot prevent you from installing solar. Your installer will help navigate any approval process.</InfoNote>}
+        </div>
+        <div>
+          <div style={{fontWeight:600,fontSize:13,color:DARK,marginBottom:8}}>How old is your roof? 🏠</div>
+          <Chips cols={2} value={roofAge} onChange={setRoofAge} options={[{key:"under10",label:"Under 10 years"},{key:"10to20",label:"10–20 years"},{key:"over20",label:"20+ years"},{key:"unsure",label:"Not sure"}]}/>
+          {roofAge==="over20"&&<InfoNote color="#7C3AED" bg="#F5F3FF" border="#DDD6FE">🏠 Roofs over 20 years old often need replacement before solar. Your installer will assess — it can often be bundled into financing.</InfoNote>}
+          {roofAge==="under10"&&<InfoNote color="#15803D" bg="#F0FDF4" border="#86EFAC">✓ A newer roof is ideal for solar — no re-roofing concerns and full 25-year panel warranty coverage.</InfoNote>}
+        </div>
+      </Widget>
+
+      {/* Aurora's role */}
+      <Widget>
+        <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:16}}>
+          <div style={{background:DARK,borderRadius:10,padding:"8px 10px",fontSize:20}}>⚡</div>
+          <div>
+            <div style={{fontWeight:700,fontSize:16,color:DARK}}>How Aurora powers your solar experience</div>
+            <div style={{color:GRAY,fontSize:13}}>The platform behind this quote — and behind every installer's design</div>
+          </div>
+        </div>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:14}}>
+          {[
+            {icon:"🛰️",title:"Satellite roof analysis",desc:"Aurora's AI measures your exact roof dimensions, pitch, and orientation from satellite imagery — no ladder required before the site visit."},
+            {icon:"☀️",title:"Real production modeling",desc:"Full 3D sun-path simulation calculates exactly how much energy your panels will produce each month, not just an annual average."},
+            {icon:"📐",title:"Precision system sizing",desc:"The right number of panels in the right spots. Aurora designs for maximum output — not just maximum panel count."},
+            {icon:"📲",title:"Live homeowner monitoring",desc:"Once your system is live, track real-time production and cumulative savings from the Aurora app — day one, every day."},
+          ].map(f=>(
+            <div key={f.title} style={{background:LIGHT,borderRadius:10,padding:"12px 14px"}}>
+              <div style={{fontSize:20,marginBottom:6}}>{f.icon}</div>
+              <div style={{fontWeight:600,color:DARK,fontSize:13,marginBottom:4}}>{f.title}</div>
+              <div style={{color:GRAY,fontSize:12,lineHeight:1.5}}>{f.desc}</div>
+            </div>
+          ))}
+        </div>
+        <InfoNote color="#1E40AF" bg="#EFF6FF" border="#BFDBFE">
+          🏆 Aurora is used by 9 of the top 10 US solar installers. Every installer in our network designs your system on Aurora — so your proposal is built on real data, not a rough guess.
+        </InfoNote>
+      </Widget>
+
+      {/* Interactive process steps */}
+      <Widget>
+        <WTitle title="The solar process, step by step" sub="Tap any step — includes what Aurora does behind the scenes"/>
+        <div style={{display:"flex",flexDirection:"column",gap:4}}>
+          {STEPS.map(s=>{
+            const isOpen=openStep===s.n,isCurrent=stage!==null&&s.n===stage+1;
+            return <div key={s.n} style={{borderRadius:10,overflow:"hidden",border:isCurrent?`2px solid ${Y}`:"1.5px solid transparent",transition:"all .2s"}}>
+              <div onClick={()=>setOpenStep(isOpen?null:s.n)} style={{display:"flex",gap:14,alignItems:"center",padding:"13px 16px",cursor:"pointer",background:isOpen?"#FFFBEB":isCurrent?"#FFFDE7":LIGHT,transition:"background .15s"}}>
+                <div style={{width:30,height:30,borderRadius:"50%",background:isCurrent||isOpen?Y:"#E5E7EB",display:"flex",alignItems:"center",justifyContent:"center",fontWeight:800,fontSize:13,flexShrink:0,transition:"background .2s"}}>{s.n}</div>
+                <div style={{flex:1}}>
+                  <div style={{fontWeight:600,color:DARK,fontSize:14}}>{s.icon} {s.title}</div>
+                  {!isOpen&&<div style={{color:GRAY,fontSize:12,marginTop:1}}>{s.short}</div>}
+                </div>
+                {isCurrent&&!isOpen&&<span style={{background:Y,color:DARK,fontSize:10,fontWeight:700,padding:"2px 7px",borderRadius:20,flexShrink:0}}>UP NEXT</span>}
+                <span style={{color:GRAY}}>{isOpen?"▾":"▸"}</span>
+              </div>
+              {isOpen&&<div style={{padding:"0 16px 16px 60px",background:"#FFFBEB"}}>
+                <div style={{color:"#78350F",fontSize:13,lineHeight:1.7,borderTop:"1px solid #FDE68A",paddingTop:10,marginBottom:12}}>{s.long}</div>
+                {s.aurora&&<div style={{background:"#111",borderRadius:8,padding:"10px 14px",display:"flex",gap:8,alignItems:"flex-start"}}>
+                  <span style={{color:Y,fontSize:14,flexShrink:0,marginTop:1}}>⚡</span>
+                  <div style={{color:"#E5E7EB",fontSize:12,lineHeight:1.6}}><strong style={{color:Y}}>Aurora's role: </strong>{s.aurora}</div>
+                </div>}
+              </div>}
+            </div>;
+          })}
+        </div>
+      </Widget>
+
+      {/* Pre-installer data collection */}
+      <Widget highlight={!!creditScore||bill!==200}>
+        <WTitle title="Make your estimate real" sub="A couple of details sharpens everything above"/>
+        <div style={{marginBottom:16}}>
+          <div style={{fontWeight:600,fontSize:13,color:DARK,marginBottom:8}}>Roughly what's your credit score? 💳</div>
+          <div style={{fontSize:12,color:GRAY,marginBottom:8}}>Helps show realistic financing options alongside savings</div>
+          <Chips cols={2} value={creditScore} onChange={setCreditScore} options={[
+            {key:"excellent",label:"Excellent (750+)"},
+            {key:"good",     label:"Good (700–749)"},
+            {key:"fair",     label:"Fair (640–699)"},
+            {key:"building", label:"Building (<640)"},
+          ]}/>
+        </div>
+        <div>
+          <div style={{fontWeight:600,fontSize:13,color:DARK,marginBottom:8}}>Average monthly electric bill 💡</div>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
+            <span style={{color:GRAY,fontSize:13}}>Drag to set your bill</span>
+            <span style={{fontWeight:800,fontSize:22,color:DARK}}>${bill}</span>
+          </div>
+          <input type="range" min={50} max={800} step={10} value={bill} onChange={e=>setBill(+e.target.value)}/>
+          <div style={{display:"flex",justifyContent:"space-between",color:GRAY,fontSize:12,marginTop:6}}><span>$50</span><span>$400</span><span>$800+</span></div>
+        </div>
+      </Widget>
+
+      <Widget highlight={!!utility}>
+        <WTitle title="Utility provider" sub="Calibrates local solar rates" check={utility?"gold":null}/>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+          {(location.utilities||["Municipal Light and Power","Chugach Electric","Matanuska Electric","Don't know"]).map(u=>(
+            <div key={u} onClick={()=>setUtility(u)}
+              style={{padding:"10px 14px",borderRadius:8,cursor:"pointer",fontSize:13,fontWeight:utility===u?700:400,color:utility===u?DARK:GRAY,background:utility===u?"#FFFBEB":LIGHT,border:utility===u?`1.5px solid ${Y}`:"1.5px solid transparent",transition:"all .15s"}}>
+              {utility===u?"✓ ":""}{u}
+            </div>
+          ))}
+        </div>
+      </Widget>
+
+      <AddressWidget address={address} setAddress={setAddress} addrDone={addrDone} setAddrDone={setAddrDone}/>
+    </div>
+
+    <CtaBox
+      ready={addrDone}
+      readyMsg="✓ Ready — here are installers near you with personalised estimates"
+      notReadyMsg="Add your address for personalised results — or browse installers now."
+      onClick={()=>go("installers")}
+      label="See installers in my area →"
+    />
+  </Page>;
+}
+
+// ── BATTERY ───────────────────────────────────────────────────────────────────
+function Battery({go}){
+  const [email,setEmail]=useState("");
+  const [phone,setPhone]=useState("");
+  const [name,setName]=useState("");
+  const [done,setDone]=useState(false);
+  const canSubmit=email.includes("@")&&name.trim().length>1;
+  return <Page>
+    <Back go={go} to="home"/>
+    <div style={{textAlign:"center",padding:"20px 0 24px"}}>
+      <div style={{fontSize:56,marginBottom:16}}>🔋</div>
+      <h2 style={{fontSize:28,fontWeight:800,color:DARK,margin:"0 0 12px"}}>Battery & backup storage</h2>
+      <p style={{color:GRAY,fontSize:15}}>Energy independence, outage protection, and EV charging — from your own roof.</p>
+    </div>
+    <div style={{display:"flex",flexDirection:"column",gap:14}}>
+      <Widget>
+        <WTitle title="What battery storage unlocks"/>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+          {[{icon:"🌩️",t:"Outage protection",d:"Keep lights on when the grid goes down"},{icon:"🚗",t:"EV charging",d:"Charge your car with clean energy"},{icon:"🌙",t:"Use solar after dark",d:"Store energy during the day"},{icon:"📈",t:"Maximize savings",d:"Sell excess at peak rates"}].map(f=>(
+            <div key={f.t} style={{background:LIGHT,borderRadius:10,padding:14}}>
+              <div style={{fontSize:22,marginBottom:6}}>{f.icon}</div>
+              <div style={{fontWeight:600,color:DARK,fontSize:13,marginBottom:2}}>{f.t}</div>
+              <div style={{color:GRAY,fontSize:12}}>{f.d}</div>
+            </div>
+          ))}
+        </div>
+      </Widget>
+
+      {!done
+        ?<div style={{background:"#FFFBEB",border:`1.5px solid ${Y}`,borderRadius:14,padding:24}}>
+          <div style={{fontWeight:700,fontSize:18,color:DARK,marginBottom:4}}>Talk to a battery specialist</div>
+          <div style={{color:GRAY,fontSize:14,lineHeight:1.6,marginBottom:20}}>Battery storage is available in select areas. Leave your details and one of our associates will reach out to walk you through your options — no pressure, no commitment.</div>
+          <div style={{display:"flex",flexDirection:"column",gap:10,marginBottom:16}}>
+            <div>
+              <div style={{fontSize:12,color:GRAY,fontWeight:500,marginBottom:4}}>Your name</div>
+              <input type="text" value={name} onChange={e=>setName(e.target.value)} placeholder="Jane Smith"
+                style={{width:"100%",padding:"11px 14px",borderRadius:8,border:"1.5px solid #D1D5DB",fontSize:14,outline:"none",fontFamily:"inherit"}}/>
+            </div>
+            <div>
+              <div style={{fontSize:12,color:GRAY,fontWeight:500,marginBottom:4}}>Email address <span style={{color:"#EF4444"}}>*</span></div>
+              <input type="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder="you@email.com"
+                style={{width:"100%",padding:"11px 14px",borderRadius:8,border:"1.5px solid #D1D5DB",fontSize:14,outline:"none",fontFamily:"inherit"}}/>
+            </div>
+            <div>
+              <div style={{fontSize:12,color:GRAY,fontWeight:500,marginBottom:4}}>Phone number <span style={{color:GRAY,fontWeight:400}}>(optional — for a faster response)</span></div>
+              <input type="tel" value={phone} onChange={e=>setPhone(e.target.value)} placeholder="(555) 000-0000"
+                style={{width:"100%",padding:"11px 14px",borderRadius:8,border:"1.5px solid #D1D5DB",fontSize:14,outline:"none",fontFamily:"inherit"}}/>
+            </div>
+          </div>
+          <Btn onClick={()=>setDone(true)} full disabled={!canSubmit}>Request a callback →</Btn>
+          <div style={{fontSize:11,color:GRAY,textAlign:"center",marginTop:10}}>🔒 Your info is never shared without your permission.</div>
+        </div>
+
+        :<div style={{background:"#F0FDF4",border:"1.5px solid #86EFAC",borderRadius:14,padding:28,textAlign:"center"}}>
+          <div style={{fontSize:40,marginBottom:12}}>✅</div>
+          <div style={{fontWeight:700,fontSize:20,color:"#15803D",marginBottom:8}}>You're all set, {name.split(" ")[0]}!</div>
+          <div style={{color:"#166534",fontSize:14,lineHeight:1.7,marginBottom:8}}>
+            One of our battery storage associates will reach out to you{phone?" by phone or email":" by email"} within 1–2 business days to walk you through what's available in your area.
+          </div>
+          <div style={{color:"#15803D",fontSize:13,marginBottom:24,background:WHITE,borderRadius:8,padding:"10px 14px",display:"inline-block"}}>
+            📧 {email}{phone&&<><br/>📞 {phone}</>}
+          </div>
+          <div><Btn onClick={()=>go("home")} secondary>Explore other paths</Btn></div>
+        </div>
+      }
+    </div>
+  </Page>;
+}
+
+// ── INSTALLERS ────────────────────────────────────────────────────────────────
+function Installers({go,bill,utility,address,addrDone,finPriority,location,ev,homeType,shading,creditScore,taxLiability,stayDuration,motivation,roofAge,paymentMode,setPaymentMode}){
+  const [openIdx,setOpenIdx]=useState(null);
+  const {rec}=getFinRec(finPriority,creditScore,taxLiability,stayDuration);
+  const preferred=paymentMode||"Loan";
+  const sv=calcSavings(bill,utility,addrDone,ev,homeType,shading);
+  const mp=calcMonthly(bill,preferred,creditScore);
+  const netSavings=sv.precise-(mp.payment||0);
+
+  const tags=[
+    bill&&`$${bill}/mo bill`,
+    utility&&utility,
+    addrDone&&address,
+    finPriority&&`Prefers ${preferred}`,
+    ev==="have"&&"Has EV",
+    ev==="planning"&&"Planning EV",
+    homeType==="electric"&&"All-electric",
+    shading==="heavy"&&"Heavy shading",
+    shading==="some"&&"Some shading",
+    roofAge==="over20"&&"Roof 20+ yrs",
+    creditScore&&({excellent:"Credit: Excellent",good:"Credit: Good",fair:"Credit: Fair",building:"Credit: Building"}[creditScore]),
+    motivation&&({savings:"💰 Saving money",independence:"⚡ Energy independence",environment:"🌱 Going green",value:"🏡 Home value"}[motivation]),
+  ].filter(Boolean);
+
+  return <div style={{minHeight:"100vh",background:LIGHT}}>
+    <Nav/>
+    <div style={{maxWidth:680,margin:"0 auto",padding:"32px 24px"}}>
+      <h2 style={{fontSize:28,fontWeight:800,color:DARK,margin:"0 0 6px"}}>Installers in {location.city}, {location.state}</h2>
+      <p style={{color:GRAY,fontSize:15,margin:"0 0 16px"}}>Matched based on what you told us.</p>
+
+      {tags.length>0&&<div style={{background:"#F0FDF4",border:"1px solid #86EFAC",borderRadius:12,padding:"12px 16px",marginBottom:16,display:"flex",flexWrap:"wrap",gap:8,alignItems:"center"}}>
+        <span style={{color:"#15803D",fontWeight:600,fontSize:13}}>Your profile:</span>
+        {tags.map(t=><span key={t} style={{background:"#DCFCE7",color:"#166534",fontSize:12,fontWeight:500,padding:"3px 10px",borderRadius:20}}>{t}</span>)}
+      </div>}
+
+      {/* Payment toggle — pick how you'd like to pay, numbers update live */}
+      <PaymentToggle paymentMode={preferred} setPaymentMode={setPaymentMode} rec={rec}/>
+      <div style={{background:WHITE,border:"1.5px solid #E5E7EB",borderRadius:12,padding:"14px 16px",marginBottom:8}}>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+          {preferred==="Cash"
+            ?<>
+              <StatBox label="System cost" value={mp.upfront}/>
+              <StatBox label="Monthly savings" value={sv.label} green/>
+              <StatBox label="Payback period" value="6–8 years"/>
+              <StatBox label="25-yr savings" value={`~$${(sv.precise*12*22).toLocaleString()}`} green/>
+            </>
+            :<>
+              <StatBox label="Monthly payment" value={mp.range||mp.label}/>
+              <StatBox label="Monthly savings" value={sv.label} green/>
+              {mp.apr&&<StatBox label="Rate range" value={mp.apr}/>}
+              <StatBox label="Net benefit" value={netSavings>=0?`+$${netSavings}/mo`:`-$${Math.abs(netSavings)}/mo`} green={netSavings>0}/>
+            </>
+          }
+        </div>
+        <div style={{fontSize:12,color:GRAY,marginTop:10,lineHeight:1.5}}>{mp.note}</div>
+      </div>
+
+      <div style={{display:"flex",flexDirection:"column",gap:14,marginBottom:24}}>
+        {INSTALLERS.map((inst,i)=>(
+          <div key={i} style={{background:WHITE,border:"1.5px solid #E5E7EB",borderRadius:14,overflow:"hidden"}}>
+            <div style={{padding:20}}>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:14}}>
+                <div style={{display:"flex",gap:12}}>
+                  <div style={{width:48,height:48,borderRadius:10,background:LIGHT,display:"flex",alignItems:"center",justifyContent:"center",fontSize:24,flexShrink:0}}>{inst.logo}</div>
+                  <div>
+                    <div style={{fontWeight:700,fontSize:16,color:DARK}}>{inst.name}</div>
+                    <div style={{color:GRAY,fontSize:12}}>In business since {inst.since}</div>
+                    <div style={{display:"flex",gap:4,alignItems:"center",marginTop:2}}>
+                      <span style={{color:"#F59E0B",fontSize:13}}>{"★".repeat(Math.floor(inst.rating))}</span>
+                      <span style={{fontSize:12,color:GRAY}}>{inst.rating} ({inst.reviews})</span>
+                    </div>
+                  </div>
+                </div>
+                {inst.nabcep&&<div style={{background:"#EFF6FF",color:"#1D4ED8",fontSize:11,fontWeight:600,padding:"3px 8px",borderRadius:20,border:"1px solid #BFDBFE",flexShrink:0,cursor:"help"}} title="Passed the solar industry's most rigorous training.">✓ NABCEP</div>}
+              </div>
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8,marginBottom:14}}>
+                <StatBox label={preferred==="Cash"?"Upfront cost":"Monthly payment"} value={preferred==="Cash"?mp.upfront:(mp.range||mp.label)}/>
+                <StatBox label="Monthly savings" value={sv.label.includes("–")?sv.label.split("–")[0]+"+":sv.label} green/>
+                <StatBox label="Net benefit" value={netSavings>=0?`+$${netSavings}/mo`:`-$${Math.abs(netSavings)}/mo`} green={netSavings>0}/>
+              </div>
+              <button onClick={()=>setOpenIdx(openIdx===i?null:i)} style={{background:"none",border:"none",color:GRAY,fontSize:13,cursor:"pointer",padding:0}}>
+                {openIdx===i?"▾ Hide details":"▸ System specs · Energy costs · Installer info"}
+              </button>
+              {openIdx===i&&<div style={{borderTop:"1px solid #F3F4F6",marginTop:12,paddingTop:14,display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,fontSize:13}}>
+                <div><span style={{color:GRAY}}>System size</span><br/><strong>{ev==="have"?"11.2 kW":"8.4 kW"}</strong></div>
+                <div><span style={{color:GRAY}}>Panels</span><br/><strong>{ev==="have"?"28 × 400W":"21 × 400W"}</strong></div>
+                <div><span style={{color:GRAY}}>Annual production</span><br/><strong>{ev==="have"?"12,400 kWh":"9,200 kWh"}</strong></div>
+                <div><span style={{color:GRAY}}>25-yr savings</span><br/><strong style={{color:"#15803D"}}>~${(sv.precise*12*22).toLocaleString()}</strong></div>
+                <div><span style={{color:GRAY}}>Warranty</span><br/><strong>25 years</strong></div>
+                {mp.apr&&<div><span style={{color:GRAY}}>Loan rate</span><br/><strong>{mp.apr}</strong></div>}
+              </div>}
+            </div>
+            <div style={{padding:"0 20px 20px"}}>
+              <button style={{width:"100%",background:Y,border:"none",borderRadius:8,padding:"13px 0",fontWeight:700,fontSize:15,cursor:"pointer",color:DARK}}>
+                Contact {inst.name.split(" ")[0]} →
+              </button>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div style={{textAlign:"center",marginBottom:16}}>
+        <button onClick={()=>go("home")} style={{background:"none",border:"none",color:GRAY,fontSize:13,cursor:"pointer",textDecoration:"underline"}}>← Explore a different path</button>
+      </div>
+      <p style={{color:GRAY,fontSize:11,lineHeight:1.6}}>* All numbers are estimates based on your inputs and are not guaranteed.</p>
+    </div>
+    <Footer/>
+  </div>;
+}
+
+// ── ROOT ──────────────────────────────────────────────────────────────────────
+function App(){
+  const [screen,       setScreen]      = useState("home");
+  const [path,         setPath]        = useState(null);
+  const [bill,         setBill]        = useState(200);
+  const [utility,      setUtility]     = useState(null);
+  const [address,      setAddress]     = useState("");
+  const [addrDone,     setAddrDone]    = useState(false);
+  const [finPriority,  setFinPriority] = useState(null);
+  const [location,     setLocation]    = useState(DEFAULT_ZIP);
+  const [isOwner,      setIsOwner]     = useState(null);
+  const [paymentMode,  setPaymentMode] = useState("Loan");
+  // savings qualifiers
+  const [ev,           setEv]          = useState(null);
+  const [homeType,     setHomeType]    = useState(null);
+  const [shading,      setShading]     = useState(null);
+  // financing + shared qualifiers — credit defaults to "good"
+  const [creditScore,  setCreditScore] = useState("good");
+  const [taxLiability, setTaxLiability]= useState(null);
+  const [stayDuration, setStayDuration]= useState(null);
+  // education qualifiers
+  const [motivation,   setMotivation]  = useState(null);
+  const [hasHOA,       setHasHOA]      = useState(null);
+  const [roofAge,      setRoofAge]     = useState(null);
+
+  function handleSetLocation(loc){setLocation(loc);setUtility(null);}
+  const go=(s)=>{setScreen(s);window.scrollTo(0,0);};
+  const shared={go,bill,setBill,utility,setUtility,address,setAddress,addrDone,setAddrDone,finPriority,setFinPriority,location,isOwner,ev,setEv,homeType,setHomeType,shading,setShading,creditScore,setCreditScore,taxLiability,setTaxLiability,stayDuration,setStayDuration,motivation,setMotivation,hasHOA,setHasHOA,roofAge,setRoofAge,paymentMode,setPaymentMode};
+
+  if(screen==="home")       return <Home      {...shared} setPath={setPath} setIsOwner={setIsOwner} setLocation={handleSetLocation}/>;
+  if(screen==="savings")    return <Savings   {...shared}/>;
+  if(screen==="financing")  return <Financing {...shared}/>;
+  if(screen==="education")  return <Education {...shared}/>;
+  if(screen==="battery")    return <Battery   go={go}/>;
+  if(screen==="installers") return <Installers {...shared}/>;
+  return null;
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
+</script>
+</body>
+</html>

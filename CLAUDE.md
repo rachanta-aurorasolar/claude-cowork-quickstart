@@ -1,6 +1,6 @@
-# Sandhya Simhan's Antigravity SDK: Operating Manual
+# Claude Cowork SDK: Operating Manual
 
-**Purpose:** This file defines the unified standards for Sandhya Simhan's development environment (created in partnership with **Women Defining AI**), merging her original **Claude Code Quickstart** patterns with **Superpowers** skills and curated "Awesome" enhancements.
+**Purpose:** This file defines the unified standards for this development environment, merging original **Claude Code Quickstart** patterns with **Superpowers** skills and curated "Awesome" enhancements.
 
 ---
 

@@ -1,6 +1,6 @@
 # Claude Cowork: Unified Agentic Tooling
 
-A high-performance library of skills and workflows for agentic coding assistants, optimized for the Antigravity IDE. This repository merges the best of **Claude Code Quickstart** and **Superpowers** into a single, unified framework.
+A high-performance library of skills and workflows for agentic coding assistants.. This repository merges the best of **Claude Code Quickstart** and **Superpowers** into a single, unified framework.
 
 ## Core Features
 
